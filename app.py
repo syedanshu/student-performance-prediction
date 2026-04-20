@@ -43,26 +43,28 @@ def save_prediction(data, pred):
 # ---------- PREDICT ----------
 @app.route('/predict', methods=['POST'])
 def predict():
-    gender = encoders["gender"].transform([request.form['gender']])[0]
-    edu = encoders["parental_education"].transform([request.form['education']])[0]
-    college = encoders["college_name"].transform([request.form['college']])[0]
-    branch = encoders["branch"].transform([request.form['branch']])[0]
+    try:
+        gender = encoders["gender"].transform([request.form['gender']])[0]
+        education = encoders["parental_education"].transform([request.form['education']])[0]
+        college = encoders["college_name"].transform([request.form['college']])[0]
+        branch = encoders["branch"].transform([request.form['branch']])[0]
 
-    semester = float(request.form['semester'])
-    study = float(request.form['study'])
-    attendance = float(request.form['attendance'])
-    assignments = float(request.form['assignments'])
-    internal = float(request.form['internal'])
+        semester = float(request.form['semester'])
+        study = float(request.form['study'])
+        attendance = float(request.form['attendance'])
+        assignments = float(request.form['assignments'])
+        internal = float(request.form['internal'])
 
-    features = np.array([[college, branch, semester, gender, edu,
-                          study, attendance, assignments, internal]])
+        features = np.array([[college, branch, semester, gender, education,
+                              study, attendance, assignments, internal]])
 
-    pred = model.predict(features)[0]
+        prediction = model.predict(features)[0]
 
-    save_prediction(list(features[0]), pred)
+        return render_template("index.html",
+                               prediction_text=f"Predicted CGPA: {round(prediction,2)}")
 
-    return render_template("index.html",
-                           prediction_text=f"Predicted CGPA: {round(pred,2)}")
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')

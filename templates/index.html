@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+<div class="card p-4">
+
+<h2>CGPA Predictor</h2>
+
+<form action="/predict" method="post">
+
+<select name="gender"><option>male</option><option>female</option></select><br>
+<select name="branch"><option>CSE</option><option>ISE</option><option>ECE</option><option>MECH</option></select><br>
+<select name="college">
+<option>ABC Engineering College</option>
+<option>XYZ Institute of Technology</option>
+<option>Global Tech University</option>
+</select><br>
+
+<select name="education">
+<option>high school</option>
+<option>diploma</option>
+<option>bachelor</option>
+<option>master</option>
+</select><br>
+
+<input name="semester" placeholder="Semester"><br>
+<input name="study" placeholder="Study Hours"><br>
+<input name="attendance" placeholder="Attendance"><br>
+<input name="assignments" placeholder="Assignments"><br>
+<input name="internal" placeholder="Internal"><br>
+
+<button>Predict</button>
+
+</form>
+
+<h3>{{ prediction_text }}</h3>
+
+<a href="/dashboard">Dashboard</a><br>
+<a href="/logout">Logout</a>
+
+</div>
+</div>
+
+</body>
+</html>

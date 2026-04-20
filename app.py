@@ -79,13 +79,19 @@ def predict():
 
 
 # ---------- DASHBOARD ----------
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['GET'])
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
 
-    # Interactive charts
-    fig1 = px.histogram(df,
-                        x="average_score",
+    # Get selected branch from URL
+    selected_branch = request.args.get('branch')
+
+    # Apply filter if selected
+    if selected_branch and selected_branch != "All":
+        df = df[df['branch'] == selected_branch]
+
+    # Charts
+    fig1 = px.histogram(df, x="average_score",
                         title="Average Score Distribution")
 
     fig2 = px.scatter(df,
@@ -98,7 +104,6 @@ def dashboard():
                   y='average_score',
                   title="Branch-wise Performance")
 
-    # Convert to HTML
     graph1 = fig1.to_html(full_html=False)
     graph2 = fig2.to_html(full_html=False)
     graph3 = fig3.to_html(full_html=False)
@@ -106,7 +111,8 @@ def dashboard():
     return render_template("dashboard.html",
                            graph1=graph1,
                            graph2=graph2,
-                           graph3=graph3)
+                           graph3=graph3,
+                           selected_branch=selected_branch)
 
 
 # ---------- RUN ----------

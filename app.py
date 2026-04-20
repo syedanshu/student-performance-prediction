@@ -67,7 +67,7 @@ def predict():
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
-    df = pd.read_excel("student_performance_extended.xlsx")
+    df = pd.read_excel("student_performance_prediction.xlsx")
 
     if not os.path.exists("static"):
         os.makedirs("static")

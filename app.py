@@ -55,10 +55,13 @@ def predict():
         assignments = float(request.form['assignments'])
         internal = float(request.form['internal'])
 
+        # ✅ EXACT 9 FEATURES
         features = np.array([[college, branch, semester, gender, education,
                               study, attendance, assignments, internal]])
 
         prediction = model.predict(features)[0]
+
+        save_prediction(list(features[0]), prediction)
 
         return render_template("index.html",
                                prediction_text=f"Predicted CGPA: {round(prediction,2)}")

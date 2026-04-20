@@ -17,17 +17,26 @@ for col in ["gender", "parental_education", "college_name", "branch"]:
 # Create CGPA
 df["cgpa"] = df["average_score"] / 10
 
-# Features & target
-X = df.drop(["USN", "average_score", "result", "cgpa"], axis=1)
+# ✅ ONLY SELECT REQUIRED FEATURES (9 features)
+X = df[[
+    "college_name",
+    "branch",
+    "semester",
+    "gender",
+    "parental_education",
+    "study_hours_per_week",
+    "attendance_percentage",
+    "assignments_completed",
+    "internal_marks"
+]]
+
 y = df["cgpa"]
 
 # Train model
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
 model = RandomForestRegressor()
-model.fit(X_train, y_train)
+model.fit(X, y)
 
-# Save model
+# Save
 joblib.dump(model, "cgpa_model.pkl")
 joblib.dump(encoders, "encoders.pkl")
 

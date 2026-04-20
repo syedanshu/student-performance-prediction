@@ -6,3 +6,4 @@ joblib
 openpyxl
 matplotlib
 gunicorn
+plotly

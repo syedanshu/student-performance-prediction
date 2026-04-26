@@ -5,7 +5,6 @@
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<!-- REQUIRED -->
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <style>
@@ -64,26 +63,31 @@ Plotly.newPlot("g2", g2.data, g2.layout);
 Plotly.newPlot("g3", g3.data, g3.layout);
 Plotly.newPlot("g4", g4.data, g4.layout);
 
-// REAL-TIME FILTER
+// FILTER
 document.getElementById("branchFilter").addEventListener("change", function(){
     let branch = this.value;
 
     fetch(`/get-data?branch=${branch}`)
     .then(res => res.json())
     .then(data => {
-        if (data.graph1) {
-            let g1 = JSON.parse(data.graph1);
-            let g2 = JSON.parse(data.graph2);
-            let g3 = JSON.parse(data.graph3);
-            let g4 = JSON.parse(data.graph4);
 
-            Plotly.newPlot("g1", g1.data, g1.layout);
-            Plotly.newPlot("g2", g2.data, g2.layout);
-            Plotly.newPlot("g3", g3.data, g3.layout);
-            Plotly.newPlot("g4", g4.data, g4.layout);
-        } else {
-            document.getElementById("g1").innerHTML = "<h4>No Data</h4>";
+        if (data.empty) {
+            document.getElementById("g1").innerHTML = "<h4>No Data Available</h4>";
+            document.getElementById("g2").innerHTML = "";
+            document.getElementById("g3").innerHTML = "";
+            document.getElementById("g4").innerHTML = "";
+            return;
         }
+
+        let g1 = JSON.parse(data.graph1);
+        let g2 = JSON.parse(data.graph2);
+        let g3 = JSON.parse(data.graph3);
+        let g4 = JSON.parse(data.graph4);
+
+        Plotly.newPlot("g1", g1.data, g1.layout);
+        Plotly.newPlot("g2", g2.data, g2.layout);
+        Plotly.newPlot("g3", g3.data, g3.layout);
+        Plotly.newPlot("g4", g4.data, g4.layout);
     });
 });
 </script>

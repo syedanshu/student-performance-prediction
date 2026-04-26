@@ -69,18 +69,28 @@ def predict():
     except Exception as e:
         return f"Error: {str(e)}"
 
+
+# ---------- DATA CLEAN FUNCTION ----------
+def clean_data(df):
+    df.columns = df.columns.str.strip().str.lower()
+    df['branch'] = df['branch'].astype(str).str.strip().str.upper()
+    return df
+
+
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
-    df['branch'] = df['branch'].str.strip().str.upper()
+    df = clean_data(df)
 
-    fig1 = px.box(df, y="average_score", color="branch")
-    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
-    fig3 = px.pie(df, names="branch", hole=0.4)
+    fig1 = px.box(df, y="average_score", color="branch", title="Score Distribution")
+    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score",
+                      color="branch", title="Study vs Performance")
+    fig3 = px.pie(df, names="branch", hole=0.4, title="Branch Distribution")
 
     sem_data = df.groupby("semester")["average_score"].mean().reset_index()
-    fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
+    fig4 = px.line(sem_data, x="semester", y="average_score",
+                   markers=True, title="Semester Trend")
 
     return render_template("dashboard.html",
         graph1=fig1.to_json(),
@@ -89,11 +99,12 @@ def dashboard():
         graph4=fig4.to_json()
     )
 
+
 # ---------- REAL-TIME FILTER ----------
 @app.route('/get-data')
 def get_data():
     df = pd.read_excel("student_performance_prediction.xlsx")
-    df['branch'] = df['branch'].str.strip().str.upper()
+    df = clean_data(df)
 
     branch = request.args.get('branch')
 
@@ -101,13 +112,9 @@ def get_data():
         branch = branch.strip().upper()
         df = df[df['branch'] == branch]
 
+    # ✅ If empty → show message instead of blank graph
     if df.empty:
-        return jsonify({
-            "graph1": None,
-            "graph2": None,
-            "graph3": None,
-            "graph4": None
-        })
+        return jsonify({"empty": True})
 
     fig1 = px.box(df, y="average_score", color="branch")
     fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
@@ -117,11 +124,13 @@ def get_data():
     fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
 
     return jsonify({
+        "empty": False,
         "graph1": fig1.to_json(),
         "graph2": fig2.to_json(),
         "graph3": fig3.to_json(),
         "graph4": fig4.to_json()
     })
+
 
 # ---------- RUN ----------
 if __name__ == "__main__":

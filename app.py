@@ -1,126 +1,147 @@
-from flask import Flask, render_template, request, redirect, session, jsonify
+from flask import Flask, render_template, request, redirect, session
 import pandas as pd
 import plotly.express as px
+import joblib
+import numpy as np
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-DATA_PATH = "student_performance_prediction.xlsx"
+# Load model + encoders
+model = joblib.load("cgpa_model.pkl")
+encoders = joblib.load("encoders.pkl")
 
-# ---------- CLEAN DATA ----------
-def clean_data(df):
-    # normalize columns
-    df.columns = (
-        df.columns.str.strip()
-        .str.lower()
-        .str.replace(" ", "_")
-    )
+FILE = "student_performance_prediction.xlsx"
 
-    # flexible mapping
-    col_map = {
-        "average score": "average_score",
-        "study hours": "study_hours_per_week",
-        "attendance": "attendance_percentage"
-    }
-    df = df.rename(columns=col_map)
 
-    # ensure required columns exist
-    # fallback: pick first numeric column if average_score missing
-    if "average_score" not in df.columns:
-        num_cols = df.select_dtypes(include="number").columns
-        if len(num_cols) > 0:
-            df["average_score"] = df[num_cols[0]]
-
-    if "branch" not in df.columns:
-        df["branch"] = "UNKNOWN"
-
+# ---------- LOAD DATA ----------
+def load_data():
+    df = pd.read_excel(FILE)
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     df["branch"] = df["branch"].astype(str).str.strip().str.upper()
-
     return df
 
 
+# ---------- SAFE ENCODER ----------
+def safe_encode(encoder, value):
+    value = value.strip()
+    classes = list(encoder.classes_)
+
+    # Try exact match
+    if value in classes:
+        return encoder.transform([value])[0]
+
+    # Try lowercase match
+    for c in classes:
+        if c.lower() == value.lower():
+            return encoder.transform([c])[0]
+
+    # fallback (first value)
+    return encoder.transform([classes[0]])[0]
+
+
 # ---------- LOGIN ----------
-@app.route('/login', methods=['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         if request.form['username'] == "admin" and request.form['password'] == "1234":
             session['user'] = "admin"
-            return redirect('/')
+            return redirect('/cgpa')
         return "Invalid Login"
     return render_template("login.html")
 
 
+# ---------- LOGOUT ----------
 @app.route('/logout')
 def logout():
     session.pop('user', None)
-    return redirect('/login')
+    return redirect('/')
 
 
-# ---------- HOME ----------
-@app.route('/')
-def home():
+# ---------- CGPA PAGE ----------
+@app.route('/cgpa')
+def cgpa():
     if 'user' not in session:
-        return redirect('/login')
+        return redirect('/')
     return render_template("index.html")
+
+
+# ---------- PREDICT (ML MODEL) ----------
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'user' not in session:
+        return redirect('/')
+
+    try:
+        # SAFE encoding
+        branch = safe_encode(encoders["branch"], request.form['branch'])
+        gender = safe_encode(encoders["gender"], request.form['gender'])
+        education = safe_encode(encoders["parental_education"], request.form['education'])
+
+        semester = float(request.form['semester'])
+        study = float(request.form['study'])
+        attendance = float(request.form['attendance'])
+        assignments = float(request.form['assignments'])
+        internal = float(request.form['internal'])
+
+        # Feature order MUST match training
+        features = np.array([[
+            0,  # college (dummy)
+            branch,
+            semester,
+            gender,
+            education,
+            study,
+            attendance,
+            assignments,
+            internal
+        ]])
+
+        prediction = round(model.predict(features)[0], 2)
+
+        return render_template("index.html",
+                               prediction_text=f"🎯 Predicted CGPA: {prediction}")
+
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
-    df = pd.read_excel(DATA_PATH)
-    df = clean_data(df)
+    if 'user' not in session:
+        return redirect('/')
 
-    fig1 = px.box(df, y="average_score", color="branch")
-    fig2 = px.scatter(df, x=df.columns[0], y="average_score", color="branch")
-    fig3 = px.pie(df, names="branch")
-
-    # safe semester fallback
-    if "semester" in df.columns:
-        sem = df.groupby("semester")["average_score"].mean().reset_index()
-        fig4 = px.line(sem, x="semester", y="average_score", markers=True)
-    else:
-        fig4 = px.line(df.head(10), y="average_score")
-
-    return render_template("dashboard.html",
-        g1=fig1.to_json(),
-        g2=fig2.to_json(),
-        g3=fig3.to_json(),
-        g4=fig4.to_json()
-    )
-
-
-# ---------- FILTER API ----------
-@app.route('/get-data')
-def get_data():
-    df = pd.read_excel(DATA_PATH)
-    df = clean_data(df)
+    df = load_data()
 
     branch = request.args.get("branch")
-
     if branch and branch != "All":
-        branch = branch.strip().upper()
         df = df[df["branch"] == branch]
 
-    if df.empty:
-        return jsonify({"empty": True})
+    # KPIs
+    avg_score = round(df["average_score"].mean(), 2)
+    max_score = round(df["average_score"].max(), 2)
+    total_students = len(df)
+    top_branch = df.groupby("branch")["average_score"].mean().idxmax()
 
     fig1 = px.box(df, y="average_score", color="branch")
-    fig2 = px.scatter(df, x=df.columns[0], y="average_score", color="branch")
-    fig3 = px.pie(df, names="branch")
+    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
+    
 
-    if "semester" in df.columns:
-        sem = df.groupby("semester")["average_score"].mean().reset_index()
-        fig4 = px.line(sem, x="semester", y="average_score", markers=True)
-    else:
-        fig4 = px.line(df.head(10), y="average_score")
+    sem = df.groupby("semester")["average_score"].mean().reset_index()
+    fig3 = px.line(sem, x="semester", y="average_score", markers=True)
 
-    return jsonify({
-        "empty": False,
-        "g1": fig1.to_json(),
-        "g2": fig2.to_json(),
-        "g3": fig3.to_json(),
-        "g4": fig4.to_json()
-    })
+    return render_template("dashboard.html",
+        g1=fig1.to_html(full_html=False),
+        g2=fig2.to_html(full_html=False),
+        g3=fig3.to_html(full_html=False),
+        
+        avg_score=avg_score,
+        max_score=max_score,
+        total_students=total_students,
+        top_branch=top_branch,
+        selected_branch=branch if branch else "All"
+    )
 
 
 if __name__ == "__main__":

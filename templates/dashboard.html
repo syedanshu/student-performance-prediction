@@ -3,53 +3,106 @@
 <head>
     <title>Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .card-box {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+
+        .card-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .filter-box {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-<div class="container mt-4">
+<div class="container">
 
-    <h1 class="text-center mb-4">📊 Student Dashboard</h1>
+<h1>📊 Student Dashboard</h1>
 
-    <!-- FILTER -->
-    <div class="card p-3 mb-4">
-        <h5>🎛 Filter by Branch</h5>
+<!-- FILTER -->
+<div class="filter-box">
+<h5>🎛 Filter by Branch</h5>
 
-        <form method="get" action="/dashboard">
-            <select name="branch" class="form-select" onchange="this.form.submit()">
-                <option value="All">All</option>
-                <option value="CSE">CSE</option>
-                <option value="ISE">ISE</option>
-                <option value="ECE">ECE</option>
-                <option value="MECH">MECH</option>
-            </select>
-        </form>
-    </div>
+<select id="branchFilter" class="form-select">
+<option value="All">All</option>
+<option value="CSE">CSE</option>
+<option value="ISE">ISE</option>
+<option value="ECE">ECE</option>
+<option value="MECH">MECH</option>
+</select>
+</div>
 
-    <!-- GRAPH 1 -->
-    <div class="card mb-4 shadow p-3">
-        <h4>📈 Score Distribution</h4>
-        {{ graph1|safe }}
-    </div>
+<!-- GRAPH GRID -->
+<div class="row">
 
-    <!-- GRAPH 2 -->
-    <div class="card mb-4 shadow p-3">
-        <h4>📊 Study vs Performance</h4>
-        {{ graph2|safe }}
-    </div>
+<div class="col-md-6">
+<div class="card-box">
+<h5>📊 Score Distribution</h5>
+{{ graph1|safe }}
+</div>
+</div>
 
-    <!-- GRAPH 3 -->
-    <div class="card mb-4 shadow p-3">
-        <h4>📉 Branch Comparison</h4>
-        {{ graph3|safe }}
-    </div>
+<div class="col-md-6">
+<div class="card-box">
+<h5>📈 Study vs Performance</h5>
+{{ graph2|safe }}
+</div>
+</div>
 
-    <div class="text-center">
-        <a href="/" class="btn btn-primary">⬅ Back</a>
-    </div>
+<div class="col-md-6">
+<div class="card-box">
+<h5>🍩 Branch Distribution</h5>
+{{ graph3|safe }}
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="card-box">
+<h5>📉 Semester Trend</h5>
+{{ graph4|safe }}
+</div>
+</div>
 
 </div>
+
+<div class="text-center mt-3">
+<a href="/" class="btn btn-light">⬅ Back</a>
+</div>
+
+</div>
+
+<script>
+document.getElementById("branchFilter").addEventListener("change", function(){
+    alert("Filter UI ready (backend integration can be added as future scope)");
+});
+</script>
 
 </body>
 </html>

@@ -79,40 +79,38 @@ def predict():
 
 
 # ---------- DASHBOARD ----------
-@app.route('/dashboard', methods=['GET'])
+@app.route('/dashboard')
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
 
-    # Get selected branch from URL
-    selected_branch = request.args.get('branch')
-
-    # Apply filter if selected
-    if selected_branch and selected_branch != "All":
-        df = df[df['branch'] == selected_branch]
-
-    # Charts
-    fig1 = px.histogram(df, x="average_score",
-                        title="Average Score Distribution")
+    fig1 = px.box(df, y="average_score",
+                  color="branch",
+                  title="Score Distribution by Branch")
 
     fig2 = px.scatter(df,
                       x="study_hours_per_week",
                       y="average_score",
+                      color="branch",
+                      size="attendance_percentage",
                       title="Study Hours vs Performance")
 
-    fig3 = px.bar(df.groupby('branch')['average_score'].mean().reset_index(),
-                  x='branch',
-                  y='average_score',
-                  title="Branch-wise Performance")
+    fig3 = px.pie(df,
+                  names="branch",
+                  title="Branch Distribution",
+                  hole=0.4)
 
-    graph1 = fig1.to_html(full_html=False)
-    graph2 = fig2.to_html(full_html=False)
-    graph3 = fig3.to_html(full_html=False)
+    sem_data = df.groupby("semester")["average_score"].mean().reset_index()
+    fig4 = px.line(sem_data,
+                   x="semester",
+                   y="average_score",
+                   markers=True,
+                   title="Semester Performance Trend")
 
     return render_template("dashboard.html",
-                           graph1=graph1,
-                           graph2=graph2,
-                           graph3=graph3,
-                           selected_branch=selected_branch)
+                           graph1=fig1.to_html(False),
+                           graph2=fig2.to_html(False),
+                           graph3=fig3.to_html(False),
+                           graph4=fig4.to_html(False))
 
 
 # ---------- RUN ----------

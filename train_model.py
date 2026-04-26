@@ -1,5 +1,4 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestRegressor
 import joblib
@@ -14,10 +13,13 @@ for col in ["gender", "parental_education", "college_name", "branch"]:
     df[col] = le.fit_transform(df[col])
     encoders[col] = le
 
-# Create CGPA
+# ✅ FIX 1: Proper CGPA calculation
 df["cgpa"] = df["average_score"] / 10
 
-# ✅ ONLY SELECT REQUIRED FEATURES (9 features)
+# ✅ FIX 2: Limit CGPA range (VERY IMPORTANT)
+df["cgpa"] = df["cgpa"].clip(4, 10)
+
+# Features
 X = df[[
     "college_name",
     "branch",
@@ -32,12 +34,19 @@ X = df[[
 
 y = df["cgpa"]
 
-# Train model
-model = RandomForestRegressor()
+# ✅ FIX 3: Better model (prevents overfitting)
+model = RandomForestRegressor(
+    n_estimators=300,
+    max_depth=8,
+    min_samples_split=10,
+    min_samples_leaf=4,
+    random_state=42
+)
+
 model.fit(X, y)
 
-# Save
+# Save model
 joblib.dump(model, "cgpa_model.pkl")
 joblib.dump(encoders, "encoders.pkl")
 
-print("✅ Model trained successfully")
+print("✅ Model retrained with realistic CGPA")

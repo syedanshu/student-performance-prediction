@@ -1,58 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>CGPA Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .card-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .btn-custom:hover {
+            transform: scale(1.05);
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        input, select {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-<div class="container mt-5">
-<div class="card p-4">
+<div class="container">
+<div class="card-box">
 
-<h2>CGPA Predictor</h2>
+<h2 class="text-center mb-3">🎓 CGPA Predictor</h2>
 
 <form action="/predict" method="post">
 
-<select name="gender">
+<select name="gender" class="form-control">
 <option>male</option>
 <option>female</option>
-</select><br>
+</select>
 
-<select name="branch">
+<select name="branch" class="form-control">
 <option>CSE</option>
 <option>ISE</option>
 <option>ECE</option>
 <option>MECH</option>
-</select><br>
+</select>
 
-<select name="college">
+<select name="college" class="form-control">
 <option>ABC Engineering College</option>
 <option>XYZ Institute of Technology</option>
 <option>Global Tech University</option>
-</select><br>
+</select>
 
-<select name="education">
+<select name="education" class="form-control">
 <option>high school</option>
 <option>diploma</option>
 <option>bachelor</option>
 <option>master</option>
-</select><br>
+</select>
 
-<input name="semester" placeholder="Semester"><br>
-<input name="study" placeholder="Study Hours"><br>
-<input name="attendance" placeholder="Attendance"><br>
-<input name="assignments" placeholder="Assignments"><br>
-<input name="internal" placeholder="Internal Marks"><br>
+<input name="semester" placeholder="Semester" class="form-control">
+<input name="study" placeholder="Study Hours" class="form-control">
+<input name="attendance" placeholder="Attendance %" class="form-control">
+<input name="assignments" placeholder="Assignments Completed" class="form-control">
+<input name="internal" placeholder="Internal Marks" class="form-control">
 
-<button>Predict</button>
+<button class="btn btn-custom w-100 mt-2">Predict CGPA</button>
 
 </form>
 
-<h3>{{ prediction_text }}</h3>
+<div class="result-box">
+{{ prediction_text }}
+</div>
 
-<a href="/dashboard">Dashboard</a><br>
-<a href="/logout">Logout</a>
+<div class="text-center mt-3">
+<a href="/dashboard" class="btn btn-dark">📊 Dashboard</a>
+<a href="/logout" class="btn btn-danger">Logout</a>
+</div>
 
 </div>
 </div>

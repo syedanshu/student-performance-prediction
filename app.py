@@ -103,8 +103,21 @@ def get_data():
 
     branch = request.args.get('branch')
 
+    print("Selected branch:", branch)
+    print("Available branches:", df['branch'].unique())
+
     if branch and branch != "All":
-        df = df[df['branch'] == branch]
+        # 🔥 FIX: make case-insensitive match
+        df = df[df['branch'].str.lower() == branch.lower()]
+
+    # If empty, fallback (IMPORTANT)
+    if df.empty:
+        return jsonify({
+            "graph1": "<h4>No data available</h4>",
+            "graph2": "",
+            "graph3": "",
+            "graph4": ""
+        })
 
     fig1 = px.box(df, y="average_score", color="branch")
     fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")

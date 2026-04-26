@@ -74,6 +74,9 @@ def predict():
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
 
+    # Normalize branch values
+    df['branch'] = df['branch'].str.strip().str.upper()
+
     fig1 = px.box(df, y="average_score", color="branch",
                   title="Score Distribution")
 
@@ -91,29 +94,30 @@ def dashboard():
                    markers=True, title="Semester Trend")
 
     return render_template("dashboard.html",
-                           graph1=fig1.to_html(False),
-                           graph2=fig2.to_html(False),
-                           graph3=fig3.to_html(False),
-                           graph4=fig4.to_html(False))
+        graph1=fig1.to_html(full_html=False, include_plotlyjs='cdn'),
+        graph2=fig2.to_html(full_html=False, include_plotlyjs=False),
+        graph3=fig3.to_html(full_html=False, include_plotlyjs=False),
+        graph4=fig4.to_html(full_html=False, include_plotlyjs=False)
+    )
 
-# ---------- REAL-TIME API ----------
+# ---------- REAL-TIME FILTER ----------
 @app.route('/get-data')
 def get_data():
     df = pd.read_excel("student_performance_prediction.xlsx")
 
+    # Normalize
+    df['branch'] = df['branch'].str.strip().str.upper()
+
     branch = request.args.get('branch')
 
-    print("Selected branch:", branch)
-    print("Available branches:", df['branch'].unique())
-
     if branch and branch != "All":
-        # 🔥 FIX: make case-insensitive match
-        df = df[df['branch'].str.lower() == branch.lower()]
+        branch = branch.strip().upper()
+        df = df[df['branch'] == branch]
 
-    # If empty, fallback (IMPORTANT)
+    # Handle empty data
     if df.empty:
         return jsonify({
-            "graph1": "<h4>No data available</h4>",
+            "graph1": "<h4 style='text-align:center'>No data available</h4>",
             "graph2": "",
             "graph3": "",
             "graph4": ""
@@ -127,10 +131,10 @@ def get_data():
     fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
 
     return jsonify({
-        "graph1": fig1.to_html(False),
-        "graph2": fig2.to_html(False),
-        "graph3": fig3.to_html(False),
-        "graph4": fig4.to_html(False)
+        "graph1": fig1.to_html(full_html=False, include_plotlyjs=False),
+        "graph2": fig2.to_html(full_html=False, include_plotlyjs=False),
+        "graph3": fig3.to_html(full_html=False, include_plotlyjs=False),
+        "graph4": fig4.to_html(full_html=False, include_plotlyjs=False)
     })
 
 # ---------- RUN ----------

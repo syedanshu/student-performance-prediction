@@ -11,14 +11,12 @@
 body {
     background: linear-gradient(135deg, #667eea, #764ba2);
 }
-
-.card-box {
+.card {
     background: white;
-    border-radius: 20px;
     padding: 20px;
+    border-radius: 15px;
     margin-bottom: 20px;
 }
-
 h1 {
     color: white;
     text-align: center;
@@ -32,62 +30,45 @@ h1 {
 
 <h1>📊 Student Dashboard</h1>
 
-<select id="branchFilter" class="form-select mb-3">
-<option value="All">All</option>
-<option value="CSE">CSE</option>
-<option value="ISE">ISE</option>
-<option value="ECE">ECE</option>
-<option value="MECH">MECH</option>
+<select id="filter" class="form-select mb-3">
+<option>All</option>
+<option>CSE</option>
+<option>ISE</option>
+<option>ECE</option>
+<option>MECH</option>
 </select>
 
-<div class="card-box"><div id="g1"></div></div>
-<div class="card-box"><div id="g2"></div></div>
-<div class="card-box"><div id="g3"></div></div>
-<div class="card-box"><div id="g4"></div></div>
-
-<div class="text-center">
-<a href="/" class="btn btn-light">⬅ Back</a>
-</div>
+<div class="card"><div id="g1"></div></div>
+<div class="card"><div id="g2"></div></div>
+<div class="card"><div id="g3"></div></div>
+<div class="card"><div id="g4"></div></div>
 
 </div>
 
 <script>
-// INITIAL LOAD
-let g1 = JSON.parse('{{ graph1|safe }}');
-let g2 = JSON.parse('{{ graph2|safe }}');
-let g3 = JSON.parse('{{ graph3|safe }}');
-let g4 = JSON.parse('{{ graph4|safe }}');
+// initial render
+function draw(id, fig){
+    Plotly.newPlot(id, fig.data, fig.layout);
+}
 
-Plotly.newPlot("g1", g1.data, g1.layout);
-Plotly.newPlot("g2", g2.data, g2.layout);
-Plotly.newPlot("g3", g3.data, g3.layout);
-Plotly.newPlot("g4", g4.data, g4.layout);
+draw("g1", JSON.parse('{{ g1|safe }}'));
+draw("g2", JSON.parse('{{ g2|safe }}'));
+draw("g3", JSON.parse('{{ g3|safe }}'));
+draw("g4", JSON.parse('{{ g4|safe }}'));
 
-// FILTER
-document.getElementById("branchFilter").addEventListener("change", function(){
-    let branch = this.value;
-
-    fetch(`/get-data?branch=${branch}`)
-    .then(res => res.json())
-    .then(data => {
-
-        if (data.empty) {
-            document.getElementById("g1").innerHTML = "<h4>No Data Available</h4>";
-            document.getElementById("g2").innerHTML = "";
-            document.getElementById("g3").innerHTML = "";
-            document.getElementById("g4").innerHTML = "";
+// filter
+document.getElementById("filter").addEventListener("change", function(){
+    fetch(`/get-data?branch=${this.value}`)
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.empty){
+            document.getElementById("g1").innerHTML = "No Data";
             return;
         }
-
-        let g1 = JSON.parse(data.graph1);
-        let g2 = JSON.parse(data.graph2);
-        let g3 = JSON.parse(data.graph3);
-        let g4 = JSON.parse(data.graph4);
-
-        Plotly.newPlot("g1", g1.data, g1.layout);
-        Plotly.newPlot("g2", g2.data, g2.layout);
-        Plotly.newPlot("g3", g3.data, g3.layout);
-        Plotly.newPlot("g4", g4.data, g4.layout);
+        draw("g1", JSON.parse(data.g1));
+        draw("g2", JSON.parse(data.g2));
+        draw("g3", JSON.parse(data.g3));
+        draw("g4", JSON.parse(data.g4));
     });
 });
 </script>

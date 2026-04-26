@@ -1,16 +1,43 @@
 from flask import Flask, render_template, request, redirect, session, jsonify
-import joblib
-import numpy as np
 import pandas as pd
 import plotly.express as px
-import csv
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# Load model
-model = joblib.load("cgpa_model.pkl")
-encoders = joblib.load("encoders.pkl")
+DATA_PATH = "student_performance_prediction.xlsx"
+
+# ---------- CLEAN DATA ----------
+def clean_data(df):
+    # normalize columns
+    df.columns = (
+        df.columns.str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+    )
+
+    # flexible mapping
+    col_map = {
+        "average score": "average_score",
+        "study hours": "study_hours_per_week",
+        "attendance": "attendance_percentage"
+    }
+    df = df.rename(columns=col_map)
+
+    # ensure required columns exist
+    # fallback: pick first numeric column if average_score missing
+    if "average_score" not in df.columns:
+        num_cols = df.select_dtypes(include="number").columns
+        if len(num_cols) > 0:
+            df["average_score"] = df[num_cols[0]]
+
+    if "branch" not in df.columns:
+        df["branch"] = "UNKNOWN"
+
+    df["branch"] = df["branch"].astype(str).str.strip().str.upper()
+
+    return df
+
 
 # ---------- LOGIN ----------
 @app.route('/login', methods=['GET','POST'])
@@ -22,11 +49,12 @@ def login():
         return "Invalid Login"
     return render_template("login.html")
 
-# ---------- LOGOUT ----------
+
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     return redirect('/login')
+
 
 # ---------- HOME ----------
 @app.route('/')
@@ -35,103 +63,65 @@ def home():
         return redirect('/login')
     return render_template("index.html")
 
-# ---------- SAVE ----------
-def save_prediction(data, pred):
-    with open("predictions.csv", "a", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(data + [pred])
-
-# ---------- PREDICT ----------
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        gender = encoders["gender"].transform([request.form['gender']])[0]
-        education = encoders["parental_education"].transform([request.form['education']])[0]
-        college = encoders["college_name"].transform([request.form['college']])[0]
-        branch = encoders["branch"].transform([request.form['branch']])[0]
-
-        semester = float(request.form['semester'])
-        study = float(request.form['study'])
-        attendance = float(request.form['attendance'])
-        assignments = float(request.form['assignments'])
-        internal = float(request.form['internal'])
-
-        features = np.array([[college, branch, semester, gender, education,
-                              study, attendance, assignments, internal]])
-
-        prediction = round(model.predict(features)[0], 2)
-
-        save_prediction(list(features[0]), prediction)
-
-        return render_template("index.html",
-                               prediction_text=f"Predicted CGPA: {prediction}")
-
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-
-# ---------- DATA CLEAN FUNCTION ----------
-def clean_data(df):
-    df.columns = df.columns.str.strip().str.lower()
-    df['branch'] = df['branch'].astype(str).str.strip().str.upper()
-    return df
-
 
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
-    df = pd.read_excel("student_performance_prediction.xlsx")
+    df = pd.read_excel(DATA_PATH)
     df = clean_data(df)
 
-    fig1 = px.box(df, y="average_score", color="branch", title="Score Distribution")
-    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score",
-                      color="branch", title="Study vs Performance")
-    fig3 = px.pie(df, names="branch", hole=0.4, title="Branch Distribution")
+    fig1 = px.box(df, y="average_score", color="branch")
+    fig2 = px.scatter(df, x=df.columns[0], y="average_score", color="branch")
+    fig3 = px.pie(df, names="branch")
 
-    sem_data = df.groupby("semester")["average_score"].mean().reset_index()
-    fig4 = px.line(sem_data, x="semester", y="average_score",
-                   markers=True, title="Semester Trend")
+    # safe semester fallback
+    if "semester" in df.columns:
+        sem = df.groupby("semester")["average_score"].mean().reset_index()
+        fig4 = px.line(sem, x="semester", y="average_score", markers=True)
+    else:
+        fig4 = px.line(df.head(10), y="average_score")
 
     return render_template("dashboard.html",
-        graph1=fig1.to_json(),
-        graph2=fig2.to_json(),
-        graph3=fig3.to_json(),
-        graph4=fig4.to_json()
+        g1=fig1.to_json(),
+        g2=fig2.to_json(),
+        g3=fig3.to_json(),
+        g4=fig4.to_json()
     )
 
 
-# ---------- REAL-TIME FILTER ----------
+# ---------- FILTER API ----------
 @app.route('/get-data')
 def get_data():
-    df = pd.read_excel("student_performance_prediction.xlsx")
+    df = pd.read_excel(DATA_PATH)
     df = clean_data(df)
 
-    branch = request.args.get('branch')
+    branch = request.args.get("branch")
 
     if branch and branch != "All":
         branch = branch.strip().upper()
-        df = df[df['branch'] == branch]
+        df = df[df["branch"] == branch]
 
-    # ✅ If empty → show message instead of blank graph
     if df.empty:
         return jsonify({"empty": True})
 
     fig1 = px.box(df, y="average_score", color="branch")
-    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
-    fig3 = px.pie(df, names="branch", hole=0.4)
+    fig2 = px.scatter(df, x=df.columns[0], y="average_score", color="branch")
+    fig3 = px.pie(df, names="branch")
 
-    sem_data = df.groupby("semester")["average_score"].mean().reset_index()
-    fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
+    if "semester" in df.columns:
+        sem = df.groupby("semester")["average_score"].mean().reset_index()
+        fig4 = px.line(sem, x="semester", y="average_score", markers=True)
+    else:
+        fig4 = px.line(df.head(10), y="average_score")
 
     return jsonify({
         "empty": False,
-        "graph1": fig1.to_json(),
-        "graph2": fig2.to_json(),
-        "graph3": fig3.to_json(),
-        "graph4": fig4.to_json()
+        "g1": fig1.to_json(),
+        "g2": fig2.to_json(),
+        "g3": fig3.to_json(),
+        "g4": fig4.to_json()
     })
 
 
-# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,43 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            font-family: 'Poppins', sans-serif;
-        }
+<style>
+body {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
 
-        h1 {
-            color: white;
-            text-align: center;
-            margin: 20px 0;
-        }
+.card-box {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
 
-        .card-box {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            transition: 0.3s;
-        }
-
-        .card-box:hover {
-            transform: translateY(-5px);
-        }
-
-        .filter-box {
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-    </style>
+h1 {
+    color: white;
+    text-align: center;
+}
+</style>
 </head>
 
 <body>
@@ -46,53 +30,20 @@
 
 <h1>📊 Student Dashboard</h1>
 
-<!-- FILTER -->
-<div class="filter-box">
-<h5>🎛 Filter by Branch</h5>
-
-<select id="branchFilter" class="form-select">
+<select id="branchFilter" class="form-select mb-3">
 <option value="All">All</option>
 <option value="CSE">CSE</option>
 <option value="ISE">ISE</option>
 <option value="ECE">ECE</option>
 <option value="MECH">MECH</option>
 </select>
-</div>
 
-<!-- GRAPH GRID -->
-<div class="row">
+<div class="card-box"><div id="g1">{{ graph1|safe }}</div></div>
+<div class="card-box"><div id="g2">{{ graph2|safe }}</div></div>
+<div class="card-box"><div id="g3">{{ graph3|safe }}</div></div>
+<div class="card-box"><div id="g4">{{ graph4|safe }}</div></div>
 
-<div class="col-md-6">
-<div class="card-box">
-<h5>📊 Score Distribution</h5>
-{{ graph1|safe }}
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="card-box">
-<h5>📈 Study vs Performance</h5>
-{{ graph2|safe }}
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="card-box">
-<h5>🍩 Branch Distribution</h5>
-{{ graph3|safe }}
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="card-box">
-<h5>📉 Semester Trend</h5>
-{{ graph4|safe }}
-</div>
-</div>
-
-</div>
-
-<div class="text-center mt-3">
+<div class="text-center">
 <a href="/" class="btn btn-light">⬅ Back</a>
 </div>
 
@@ -100,7 +51,16 @@
 
 <script>
 document.getElementById("branchFilter").addEventListener("change", function(){
-    alert("Filter UI ready (backend integration can be added as future scope)");
+    let branch = this.value;
+
+    fetch(`/get-data?branch=${branch}`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("g1").innerHTML = data.graph1;
+        document.getElementById("g2").innerHTML = data.graph2;
+        document.getElementById("g3").innerHTML = data.graph3;
+        document.getElementById("g4").innerHTML = data.graph4;
+    });
 });
 </script>
 

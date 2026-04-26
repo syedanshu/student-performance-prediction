@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, jsonify
 import joblib
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ import csv
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# Load model & encoders
+# Load model
 model = joblib.load("cgpa_model.pkl")
 encoders = joblib.load("encoders.pkl")
 
@@ -22,13 +22,11 @@ def login():
         return "Invalid Login"
     return render_template("login.html")
 
-
 # ---------- LOGOUT ----------
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     return redirect('/login')
-
 
 # ---------- HOME ----------
 @app.route('/')
@@ -37,74 +35,60 @@ def home():
         return redirect('/login')
     return render_template("index.html")
 
-
-# ---------- SAVE PREDICTIONS ----------
+# ---------- SAVE ----------
 def save_prediction(data, pred):
     with open("predictions.csv", "a", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(data + [pred])
 
-
 # ---------- PREDICT ----------
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Encode categorical inputs
         gender = encoders["gender"].transform([request.form['gender']])[0]
         education = encoders["parental_education"].transform([request.form['education']])[0]
         college = encoders["college_name"].transform([request.form['college']])[0]
         branch = encoders["branch"].transform([request.form['branch']])[0]
 
-        # Numeric inputs
         semester = float(request.form['semester'])
         study = float(request.form['study'])
         attendance = float(request.form['attendance'])
         assignments = float(request.form['assignments'])
         internal = float(request.form['internal'])
 
-        # ✅ EXACT SAME FEATURES AS TRAINING
         features = np.array([[college, branch, semester, gender, education,
                               study, attendance, assignments, internal]])
 
-        prediction = model.predict(features)[0]
+        prediction = round(model.predict(features)[0], 2)
 
-        # Save prediction
         save_prediction(list(features[0]), prediction)
 
         return render_template("index.html",
-                               prediction_text=f"Predicted CGPA: {round(prediction,2)}")
+                               prediction_text=f"Predicted CGPA: {prediction}")
 
     except Exception as e:
         return f"Error: {str(e)}"
-
 
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
 
-    fig1 = px.box(df, y="average_score",
-                  color="branch",
-                  title="Score Distribution by Branch")
+    fig1 = px.box(df, y="average_score", color="branch",
+                  title="Score Distribution")
 
-    fig2 = px.scatter(df,
-                      x="study_hours_per_week",
+    fig2 = px.scatter(df, x="study_hours_per_week",
                       y="average_score",
                       color="branch",
                       size="attendance_percentage",
-                      title="Study Hours vs Performance")
+                      title="Study vs Performance")
 
-    fig3 = px.pie(df,
-                  names="branch",
-                  title="Branch Distribution",
-                  hole=0.4)
+    fig3 = px.pie(df, names="branch", hole=0.4,
+                  title="Branch Distribution")
 
     sem_data = df.groupby("semester")["average_score"].mean().reset_index()
-    fig4 = px.line(sem_data,
-                   x="semester",
-                   y="average_score",
-                   markers=True,
-                   title="Semester Performance Trend")
+    fig4 = px.line(sem_data, x="semester", y="average_score",
+                   markers=True, title="Semester Trend")
 
     return render_template("dashboard.html",
                            graph1=fig1.to_html(False),
@@ -112,6 +96,29 @@ def dashboard():
                            graph3=fig3.to_html(False),
                            graph4=fig4.to_html(False))
 
+# ---------- REAL-TIME API ----------
+@app.route('/get-data')
+def get_data():
+    df = pd.read_excel("student_performance_prediction.xlsx")
+
+    branch = request.args.get('branch')
+
+    if branch and branch != "All":
+        df = df[df['branch'] == branch]
+
+    fig1 = px.box(df, y="average_score", color="branch")
+    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
+    fig3 = px.pie(df, names="branch", hole=0.4)
+
+    sem_data = df.groupby("semester")["average_score"].mean().reset_index()
+    fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
+
+    return jsonify({
+        "graph1": fig1.to_html(False),
+        "graph2": fig2.to_html(False),
+        "graph3": fig3.to_html(False),
+        "graph4": fig4.to_html(False)
+    })
 
 # ---------- RUN ----------
 if __name__ == "__main__":

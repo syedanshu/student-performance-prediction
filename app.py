@@ -73,39 +73,26 @@ def predict():
 @app.route('/dashboard')
 def dashboard():
     df = pd.read_excel("student_performance_prediction.xlsx")
-
-    # Normalize branch values
     df['branch'] = df['branch'].str.strip().str.upper()
 
-    fig1 = px.box(df, y="average_score", color="branch",
-                  title="Score Distribution")
-
-    fig2 = px.scatter(df, x="study_hours_per_week",
-                      y="average_score",
-                      color="branch",
-                      size="attendance_percentage",
-                      title="Study vs Performance")
-
-    fig3 = px.pie(df, names="branch", hole=0.4,
-                  title="Branch Distribution")
+    fig1 = px.box(df, y="average_score", color="branch")
+    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
+    fig3 = px.pie(df, names="branch", hole=0.4)
 
     sem_data = df.groupby("semester")["average_score"].mean().reset_index()
-    fig4 = px.line(sem_data, x="semester", y="average_score",
-                   markers=True, title="Semester Trend")
+    fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
 
     return render_template("dashboard.html",
-        graph1=fig1.to_html(full_html=False, include_plotlyjs='cdn'),
-        graph2=fig2.to_html(full_html=False, include_plotlyjs=False),
-        graph3=fig3.to_html(full_html=False, include_plotlyjs=False),
-        graph4=fig4.to_html(full_html=False, include_plotlyjs=False)
+        graph1=fig1.to_json(),
+        graph2=fig2.to_json(),
+        graph3=fig3.to_json(),
+        graph4=fig4.to_json()
     )
 
 # ---------- REAL-TIME FILTER ----------
 @app.route('/get-data')
 def get_data():
     df = pd.read_excel("student_performance_prediction.xlsx")
-
-    # Normalize
     df['branch'] = df['branch'].str.strip().str.upper()
 
     branch = request.args.get('branch')
@@ -114,13 +101,12 @@ def get_data():
         branch = branch.strip().upper()
         df = df[df['branch'] == branch]
 
-    # Handle empty data
     if df.empty:
         return jsonify({
-            "graph1": "<h4 style='text-align:center'>No data available</h4>",
-            "graph2": "",
-            "graph3": "",
-            "graph4": ""
+            "graph1": None,
+            "graph2": None,
+            "graph3": None,
+            "graph4": None
         })
 
     fig1 = px.box(df, y="average_score", color="branch")
@@ -131,10 +117,10 @@ def get_data():
     fig4 = px.line(sem_data, x="semester", y="average_score", markers=True)
 
     return jsonify({
-        "graph1": fig1.to_html(full_html=False, include_plotlyjs=False),
-        "graph2": fig2.to_html(full_html=False, include_plotlyjs=False),
-        "graph3": fig3.to_html(full_html=False, include_plotlyjs=False),
-        "graph4": fig4.to_html(full_html=False, include_plotlyjs=False)
+        "graph1": fig1.to_json(),
+        "graph2": fig2.to_json(),
+        "graph3": fig3.to_json(),
+        "graph4": fig4.to_json()
     })
 
 # ---------- RUN ----------

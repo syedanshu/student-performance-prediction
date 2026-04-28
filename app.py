@@ -7,37 +7,60 @@ import numpy as np
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# Load model + encoders
+# Load model
 model = joblib.load("cgpa_model.pkl")
 encoders = joblib.load("encoders.pkl")
 
 FILE = "student_performance_prediction.xlsx"
 
-
-# ---------- LOAD DATA ----------
-def load_data():
-    df = pd.read_excel(FILE)
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-    df["branch"] = df["branch"].astype(str).str.strip().str.upper()
-    return df
-
+feature_names = [
+    "college",
+    "branch",
+    "semester",
+    "gender",
+    "education",
+    "study_hours",
+    "attendance",
+    "assignments",
+    "internal_marks"
+]
 
 # ---------- SAFE ENCODER ----------
 def safe_encode(encoder, value):
     value = value.strip()
     classes = list(encoder.classes_)
 
-    # Try exact match
     if value in classes:
         return encoder.transform([value])[0]
 
-    # Try lowercase match
     for c in classes:
         if c.lower() == value.lower():
             return encoder.transform([c])[0]
 
-    # fallback (first value)
     return encoder.transform([classes[0]])[0]
+
+
+# ---------- FEEDBACK ----------
+def generate_feedback(study, attendance, assignments, internal, cgpa):
+    feedback = []
+
+    if cgpa >= 8:
+        feedback.append("🌟 Excellent performance! Keep it up.")
+    elif cgpa >= 6:
+        feedback.append("👍 Good performance, improve consistency.")
+    else:
+        feedback.append("⚠️ Performance needs improvement.")
+
+    if study < 4:
+        feedback.append("📚 Increase study hours.")
+    if attendance < 75:
+        feedback.append("📝 Improve attendance.")
+    if assignments < 5:
+        feedback.append("📂 Complete more assignments.")
+    if internal < 25:
+        feedback.append("📊 Improve internal marks.")
+
+    return feedback
 
 
 # ---------- LOGIN ----------
@@ -66,14 +89,14 @@ def cgpa():
     return render_template("index.html")
 
 
-# ---------- PREDICT (ML MODEL) ----------
+# ---------- PREDICT ----------
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'user' not in session:
         return redirect('/')
 
     try:
-        # SAFE encoding
+        # Encode
         branch = safe_encode(encoders["branch"], request.form['branch'])
         gender = safe_encode(encoders["gender"], request.form['gender'])
         education = safe_encode(encoders["parental_education"], request.form['education'])
@@ -84,9 +107,8 @@ def predict():
         assignments = float(request.form['assignments'])
         internal = float(request.form['internal'])
 
-        # Feature order MUST match training
         features = np.array([[
-            0,  # college (dummy)
+            0,
             branch,
             semester,
             gender,
@@ -99,8 +121,52 @@ def predict():
 
         prediction = round(model.predict(features)[0], 2)
 
-        return render_template("index.html",
-                               prediction_text=f"🎯 Predicted CGPA: {prediction}")
+        # Feedback
+        feedback = generate_feedback(study, attendance, assignments, internal, prediction)
+
+        # ---------- FEATURE IMPORTANCE ----------
+        importances = model.feature_importances_
+        importance_map = dict(zip(feature_names, importances))
+
+        def impact_label(val):
+            if val > 0.3:
+                return "🔥 High impact"
+            elif val > 0.1:
+                return "⚡ Moderate impact"
+            else:
+                return "🔹 Low impact"
+
+        # ---------- HUMAN READABLE INSIGHTS ----------
+        insights = [
+            f"📚 Study Hours: {study} hrs/week ({impact_label(importance_map['study_hours'])})",
+            f"📝 Attendance: {attendance}% ({impact_label(importance_map['attendance'])})",
+            f"📂 Assignments: {assignments} ({impact_label(importance_map['assignments'])})",
+            f"📊 Internal Marks: {internal}/100 ({impact_label(importance_map['internal_marks'])})",
+            f"📅 Semester: {int(semester)} ({impact_label(importance_map['semester'])})"
+        ]
+
+        # ---------- AI EXPLANATION ----------
+        explanation = []
+
+        if importance_map["study_hours"] > 0.2:
+            explanation.append("📚 Study hours significantly influence CGPA.")
+
+        if importance_map["internal_marks"] > 0.2:
+            explanation.append("📊 Internal marks are a major factor in performance.")
+
+        if importance_map["attendance"] > 0.1:
+            explanation.append("📝 Attendance contributes to consistency and results.")
+
+        if importance_map["assignments"] < 0.05:
+            explanation.append("📂 Assignments have relatively low impact.")
+
+        return render_template(
+            "index.html",
+            prediction_text=f"🎯 Predicted CGPA: {prediction}",
+            feedback=feedback,
+            insights=insights,
+            explanation=explanation
+        )
 
     except Exception as e:
         return f"Error: {str(e)}"
@@ -112,36 +178,13 @@ def dashboard():
     if 'user' not in session:
         return redirect('/')
 
-    df = load_data()
-
-    branch = request.args.get("branch")
-    if branch and branch != "All":
-        df = df[df["branch"] == branch]
-
-    # KPIs
-    avg_score = round(df["average_score"].mean(), 2)
-    max_score = round(df["average_score"].max(), 2)
-    total_students = len(df)
-    top_branch = df.groupby("branch")["average_score"].mean().idxmax()
+    df = pd.read_excel(FILE)
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
     fig1 = px.box(df, y="average_score", color="branch")
-    fig2 = px.scatter(df, x="study_hours_per_week", y="average_score", color="branch")
-    
-
-    sem = df.groupby("semester")["average_score"].mean().reset_index()
-    fig3 = px.line(sem, x="semester", y="average_score", markers=True)
 
     return render_template("dashboard.html",
-        g1=fig1.to_html(full_html=False),
-        g2=fig2.to_html(full_html=False),
-        g3=fig3.to_html(full_html=False),
-        
-        avg_score=avg_score,
-        max_score=max_score,
-        total_students=total_students,
-        top_branch=top_branch,
-        selected_branch=branch if branch else "All"
-    )
+                           g1=fig1.to_html(full_html=False))
 
 
 if __name__ == "__main__":

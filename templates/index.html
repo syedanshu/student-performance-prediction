@@ -11,7 +11,7 @@ body {
 }
 
 .container {
-    width: 400px;
+    width: 420px;
     margin: 40px auto;
     background: white;
     padding: 30px;
@@ -21,6 +21,7 @@ body {
 
 h2 {
     text-align: center;
+    margin-bottom: 20px;
 }
 
 input, select {
@@ -54,6 +55,14 @@ button:hover {
     font-size: 18px;
     color: green;
 }
+
+.section {
+    margin-top: 20px;
+}
+
+ul {
+    padding-left: 20px;
+}
 </style>
 </head>
 
@@ -66,10 +75,10 @@ button:hover {
 <form action="/predict" method="POST">
 
 <select name="branch">
-<option value="cse">🏫 CSE</option>
-<option value="ise">🏫 ISE</option>
-<option value="ece">🏫 ECE</option>
-<option value="mech">🏫 MECH</option>
+<option value="CSE">🏫 CSE</option>
+<option value="ISE">🏫 ISE</option>
+<option value="ECE">🏫 ECE</option>
+<option value="MECH">🏫 MECH</option>
 </select>
 
 <select name="gender">
@@ -84,26 +93,51 @@ button:hover {
 </select>
 
 <input type="number" name="semester" placeholder="📅 Semester" required>
-
 <input type="number" name="study" placeholder="📚 Study Hours" required>
-
 <input type="number" name="attendance" placeholder="📝 Attendance %" required>
-
 <input type="number" name="assignments" placeholder="📂 Assignments Completed" required>
-
 <input type="number" name="internal" placeholder="📊 Internal Marks" required>
 
 <button type="submit">✨ Predict CGPA</button>
 
 </form>
 
-<div class="result">
-{{ prediction_text }}
-</div>
+<!-- RESULT -->
+{% if prediction_text %}
+<div class="result">{{ prediction_text }}</div>
+{% endif %}
+
+{% if feedback %}
+<h4>🤖 Smart Feedback:</h4>
+<ul>
+{% for f in feedback %}
+<li>{{ f }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if insights %}
+<h4>📌 Input Analysis:</h4>
+<ul>
+{% for i in insights %}
+<li>{{ i }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if explanation %}
+<h4>🧠 AI Explanation:</h4>
+<ul>
+{% for e in explanation %}
+<li>{{ e }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
 
 <br>
 
-<a href="/dashboard"><button>📊 Dashboard</button></a>
+<a href="/dashboard"><button>📊 Go to Dashboard</button></a>
 <a href="/logout"><button style="background:red;">🚪 Logout</button></a>
 
 </div>
